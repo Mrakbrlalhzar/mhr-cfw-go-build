@@ -1,24 +1,17 @@
-name: Build and Release mhr-cfw-go
+name: Build  and Release
 
 on:
-  workflow_dispatch:  # امکان اجرای دستی از تب Actions
+  workflow_dispatch:
   push:
-    branches: [ master ]
+    branches: [ main ]
 
+# 🔑 این بلاک را اضافه کنید
 permissions:
   contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        goos: [linux]
-        goarch: [arm64, amd64, arm]
-        include:
-          - goarch: arm
-            goarm: 7
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,21 +19,18 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24'
 
-      - name: Build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          GOARM: ${{ matrix.goarm || '0' }}
+      - name: Build for linux/arm (ARMv7)
         run: |
           cd cmd/mhr-cfw
-          go build -ldflags "-s -w" -o mhr-cfw-go-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.goarm && format('v{0}', matrix.goarm) }} .
+          GOOS=linux GOARCH=arm GOARM=7 go build -o findns-armv7 .
+          mkdir -p ${{ github.workspace }}/output
+          cp build-armv7 ${{ github.workspace }}/output/
 
-      - name: Upload to Release
+      - name: Create Release and Upload Asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
           name: Build ${{ github.run_number }}
-          files: cmd/mhr-cfw/mhr-cfw-go-*
-          token: ${{ secrets.GITHUB_TOKEN }}
+          files: output/build-armv7
